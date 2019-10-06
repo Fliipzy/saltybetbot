@@ -2,6 +2,7 @@
 using SaltyLibrary.Users.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Text;
 
@@ -22,8 +23,16 @@ namespace SaltyLibrary.Services
 
         public CookieCollection Login(IUserCredentials userCredentials)
         {
+            string postdata = $"email={userCredentials.Email}&pword={userCredentials.Password}&authenticate=signin";
+            byte[] data = Encoding.ASCII.GetBytes(postdata);
+
+            using (Stream requestStream = webRequest.GetRequestStream())
+            {
+                requestStream.Write(data, 0, data.Length);
+            }
+
             OnLoggedIn(new EventArgs());
-            throw new NotImplementedException();
+            return null;
         }
 
         protected virtual void OnLoggedIn(EventArgs e)
