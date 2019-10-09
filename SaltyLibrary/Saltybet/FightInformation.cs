@@ -32,6 +32,8 @@ namespace SaltyLibrary.Saltybet
 
         public TeamColor Winner { get; set; }
 
+        public bool Tournament { get; set; }
+
         public override string ToString()
         {
             return $"Red: {RedTeamName}, Blue: {BlueTeamName}";

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace SaltyLibrary.Services.Interfaces
 {
@@ -10,6 +11,6 @@ namespace SaltyLibrary.Services.Interfaces
     {
         event EventHandler<EventArgs> LoggedIn;
 
-        CookieCollection Login(IUserCredentials userCredentials);
+        CookieContainer Login(IUserCredentials userCredentials);
     }
 }

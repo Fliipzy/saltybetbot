@@ -5,34 +5,59 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace SaltyLibrary.Services
 {
     public class LoginService : ILoginService
     {
-        private HttpWebRequest webRequest;
-
         public event EventHandler<EventArgs> LoggedIn;
 
         public LoginService()
         {
-            webRequest = HttpWebRequest.CreateHttp("https://www.saltybet.com/authenticate?signin=1");
-            webRequest.Method = "POST";
-            webRequest.ContentType = "application/x-www-form-urlencoded";
         }
 
-        public CookieCollection Login(IUserCredentials userCredentials)
+        public CookieContainer Login(IUserCredentials userCredentials)
         {
-            string postdata = $"email={userCredentials.Email}&pword={userCredentials.Password}&authenticate=signin";
-            byte[] data = Encoding.ASCII.GetBytes(postdata);
+            var cookieContainer = new CookieContainer();
+            var data_str = $"email={userCredentials.Email}&pword={userCredentials.Password}&authenticate=signin";
+            var data_bytes = Encoding.ASCII.GetBytes(data_str);
 
-            using (Stream requestStream = webRequest.GetRequestStream())
+            var request = HttpWebRequest.CreateHttp("https://www.saltybet.com/authenticate?signin=1");
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = data_bytes.Length;
+            request.AllowAutoRedirect = true;
+            request.CookieContainer = cookieContainer;
+
+            using (Stream stream = request.GetRequestStream())
             {
-                requestStream.Write(data, 0, data.Length);
+                stream.Write(data_bytes, 0, data_bytes.Length);
+                stream.Close();
+            }
+
+            WebResponse response;
+            try
+            {
+                response = request.GetResponse();
+            }
+
+            catch (WebException e)
+            {
+                if (e.Status == WebExceptionStatus.ProtocolError)
+                {
+                    //Expected (HTTP 302 Temporarily moved).
+                }
+                else
+                {
+                    Console.WriteLine("Error occurred while logging in...");
+                    return null;
+                }
+
             }
 
             OnLoggedIn(new EventArgs());
-            return null;
+            return cookieContainer;
         }
 
         protected virtual void OnLoggedIn(EventArgs e)
