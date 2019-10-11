@@ -44,5 +44,17 @@ namespace SaltyLibrary.Saltybet
 
         [JsonProperty("remaining")]
         public string Remaining { get; set; }
+
+        public override string ToString()
+        {
+            return $"P1Name: {P1Name}\n" + 
+                   $"P2Name: {P2Name}\n" + 
+                   $"P1Total: {P1Total}\n" + 
+                   $"P2Total: {P2Total}\n" + 
+                   $"Status: {Status}\n" + 
+                   $"Alert: {Alert}\n" + 
+                   $"X: {X}\n" + 
+                   $"Remaining: {Remaining}\n";
+        }
     }
 }

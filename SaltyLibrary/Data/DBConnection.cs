@@ -1,6 +1,7 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 
 namespace SaltyLibrary.Data
@@ -12,9 +13,7 @@ namespace SaltyLibrary.Data
         public string DatabaseName { get; set; }
         public string Username { get; set; }
         public string  Password { get; set; }
-
-        private MySqlConnection connection;
-        public MySqlConnection Connection { get { return connection; } }
+        public MySqlConnection Connection { get; private set; }
 
         private static DBConnection instance = null;
 
@@ -38,20 +37,24 @@ namespace SaltyLibrary.Data
         {
             if (Connection == null)
             {
-                if (String.IsNullOrEmpty(DatabaseName))
+                if (string.IsNullOrEmpty(DatabaseName))
                 {
                     return false;
                 }
-                string connection_str = String.Format("Server=localhost; database={0}; UID={1}; password={2}", DatabaseName, Username, Password);
-                connection = new MySqlConnection(connection_str);
-                connection.Open();
+                string connection_str = string.Format("server=localhost;database={0};userid={1};password={2}", DatabaseName, Username, Password);
+                Connection = new MySqlConnection(connection_str);
+                Connection.Open();
+            }
+            else if (Connection.State == ConnectionState.Closed)
+            {
+                Connection.Open();
             }
             return true;
         }
 
         public void Close()
         {
-            connection.Close();
+            Connection.Close();
         }
     }
 }

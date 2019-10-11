@@ -13,112 +13,130 @@ namespace SaltyLibrary.Repositories
 
         public void CreateFighter(Fighter fighter)
         {
-            if (dbConnection.IsConnected())
+            string sql = $"INSERT INTO fighter (name, wins, losses) VALUES (@name, @wins, @losses)";
+            var cmd = new MySqlCommand(sql, dbConnection.Connection);
+            cmd.Parameters.AddWithValue("name", fighter.Name);
+            cmd.Parameters.AddWithValue("wins", fighter.Wins);
+            cmd.Parameters.AddWithValue("losses", fighter.Losses);
+            try
             {
-                string sql = $"INSERT INTO fighter (name, wins, losses) VALUES ('{fighter.Name}', {fighter.Wins}, {fighter.Losses});";
-                var cmd = new MySqlCommand(sql, dbConnection.Connection);
-                try
-                {
-                    cmd.ExecuteNonQuery();
-                }
-                catch (MySqlException e)
-                {
-                    Console.WriteLine("DB error: " + e.Message);
-                }
+                cmd.ExecuteNonQuery();
             }
+            catch (MySqlException e)
+            {
+                Console.WriteLine("DB error: " + e.Message);
+            }
+            cmd.Dispose();
         }
 
         public Fighter FindFighterByName(string name)
         {
-            if (dbConnection.IsConnected())
-            {
-                Fighter fighter = null;
-                string sql = $"SELECT * FROM fighter WHERE name='{name}';";
-                var cmd = new MySqlCommand(sql, dbConnection.Connection);
-                var reader = cmd.ExecuteReader();
-                var fighterData = new object[4];
+            Fighter fighter = null;
+            string sql = $"SELECT * FROM fighter WHERE name=@name";
+            var cmd = new MySqlCommand(sql, dbConnection.Connection);
+            cmd.Parameters.AddWithValue("name", name);
+            var reader = cmd.ExecuteReader();
+            var fighterData = new object[4];
 
-                if (reader.Read())
-                {
-                    reader.GetValues(fighterData);
-                    fighter = MapRowToFighter(fighterData);
-                } 
-                reader.Close();
-                return fighter;
-            }
-            return null;
+            if (reader.Read())
+            {
+                reader.GetValues(fighterData);
+                fighter = MapRowToFighter(fighterData);
+            } 
+            reader.Close();
+            cmd.Dispose();
+            return fighter;
         }
 
         public Fighter FindFighterByID(int id)
         {
-            if (dbConnection.IsConnected())
-            {
-                Fighter fighter = null;
-                string sql = $"SELECT * FROM fighter WHERE id={id};";
-                var cmd = new MySqlCommand(sql, dbConnection.Connection);
-                var reader = cmd.ExecuteReader();
-                var fighterData = new object[4];
+            Fighter fighter = null;
+            string sql = $"SELECT * FROM fighter WHERE id=@id";
+            var cmd = new MySqlCommand(sql, dbConnection.Connection);
+            cmd.Parameters.AddWithValue("id", id);
+            var reader = cmd.ExecuteReader();
+            var fighterData = new object[4];
 
-                if (reader.Read())
-                {
-                    reader.GetValues(fighterData);
-                    fighter = MapRowToFighter(fighterData);
-                }
-                reader.Close();
-                return fighter;
+            if (reader.Read())
+            {
+                reader.GetValues(fighterData);
+                fighter = MapRowToFighter(fighterData);
             }
-            return null;
+            reader.Close();
+            cmd.Dispose();
+            dbConnection.Close();
+            return fighter;
         }
 
         public List<Fighter> FindAllFighters()
         {
-            if (dbConnection.IsConnected())
-            {
-                var fighters = new List<Fighter>();
-                string sql = "SELECT * FROM fighter;";
-                var cmd = new MySqlCommand(sql, dbConnection.Connection);
-                var reader = cmd.ExecuteReader();
+            List<Fighter> fighters = new List<Fighter>();
 
-                while (reader.Read())
-                {
-                    var fdata = new object[4];
-                    reader.GetValues(fdata);
-                    Fighter fighter = MapRowToFighter(fdata);
-                    fighters.Add(fighter);
-                }
-                reader.Close();
-                return fighters;
+            string sql = "SELECT * FROM fighter;";
+            var cmd = new MySqlCommand(sql, dbConnection.Connection);
+            var reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                var fighter = new Fighter();
+                var fdata = new object[4];
+                reader.GetValues(fdata);
+                fighter = MapRowToFighter(fdata);
+                fighters.Add(fighter);
             }
-            return null;
+            reader.Close();
+            cmd.Dispose();
+            return fighters;
         }
         public void UpdateFighter(int id, Fighter fighter)
         {
-            if (dbConnection.IsConnected())
-            {
-                string sql = $"UPDATE fighter SET name = '{fighter.Name}', wins = {fighter.Wins}, losses = {fighter.Losses} WHERE id = {id};";
-                var cmd = new MySqlCommand(sql, dbConnection.Connection);
-                cmd.ExecuteNonQuery();
-            }
+            string sql = $"UPDATE fighter SET name = @name, wins = @wins, losses = @losses WHERE id = @id";
+
+            var cmd = new MySqlCommand(sql, dbConnection.Connection);
+            cmd.Parameters.AddWithValue("name", fighter.Name);
+            cmd.Parameters.AddWithValue("wins", fighter.Wins);
+            cmd.Parameters.AddWithValue("losses", fighter.Losses);
+            cmd.Parameters.AddWithValue("id", id);
+
+            cmd.ExecuteNonQuery();
+            cmd.Dispose();
         }
 
         public void DeleteFighterByID(int id)
         {
-            if (dbConnection.IsConnected())
-            {
-                string sql = $"DELETE FROM fighter WHERE id = {id};";
-                var cmd = new MySqlCommand(sql, dbConnection.Connection);
-                cmd.ExecuteNonQuery();
-            }
+            string sql = $"DELETE FROM fighter WHERE id = @id";
+            var cmd = new MySqlCommand(sql, dbConnection.Connection);
+            cmd.Parameters.AddWithValue("id", id);
+            cmd.ExecuteNonQuery();
+            cmd.Dispose();
         }
 
         public void DeleteFighterByName(string name)
         {
-            if (dbConnection.IsConnected())
+            string sql = $"DELETE FROM fighter WHERE name = @name";
+            var cmd = new MySqlCommand(sql, dbConnection.Connection);
+            cmd.Parameters.AddWithValue("name", name);
+            cmd.ExecuteNonQuery();
+            cmd.Dispose();
+        }
+
+        public Fighter FighterExists(string name)
+        {
+            Fighter fighter = null;
+
+            string sql = $"SELECT * FROM fighter WHERE name = @name";
+            var cmd = new MySqlCommand(sql, dbConnection.Connection);
+            cmd.Parameters.AddWithValue("name", name);
+            var reader = cmd.ExecuteReader();
+
+            if (reader.Read())
             {
-                string sql = $"DELETE FROM fighter WHERE name = '{name}';";
-                var cmd = new MySqlCommand(sql, dbConnection.Connection);
-                cmd.ExecuteNonQuery();
+                object[] fdata = new object[4];
+                reader.GetValues(fdata);
+                fighter = MapRowToFighter(fdata);
             }
+            reader.Close();         
+            return fighter;
         }
 
         private Fighter MapRowToFighter(object[] fdata)

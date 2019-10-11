@@ -23,12 +23,10 @@ namespace SaltyLibrary.Services
 
             string jsonResponse = null;
 
-            using (var responseStream = request.GetResponse().GetResponseStream())
+            using (var reader = new StreamReader(request.GetResponse().GetResponseStream()))
             {
-                using (var reader = new StreamReader(responseStream))
-                {
-                    jsonResponse = reader.ReadToEnd();
-                }
+                jsonResponse = reader.ReadToEnd();
+                reader.Close();
             }
 
             var state = JsonConvert.DeserializeObject<State>(jsonResponse);
