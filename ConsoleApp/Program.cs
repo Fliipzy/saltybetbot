@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
-using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using SaltyLibrary;
 using SaltyLibrary.Data;
@@ -14,107 +12,118 @@ using SaltyLibrary.Saltybet;
 using SaltyLibrary.Saltybet.Enums;
 using SaltyLibrary.Services;
 using SaltyLibrary.Users;
+using WebSocketSharp;
 
 namespace ConsoleApp
 {
     class Program
     {
-        private static DBConnection db = DBConnection.Instance();
-        private static FighterRepository fighterRepository = new FighterRepository();
+        private static DBConnection db;
+        private static SaltyWebSocketListener wsListener;
+        private static FighterRepository fighterRepository;
+        private static StateExtractor stateExtractor;
+        private static State currentState;
+        private static Match currentMatch;
+        private static bool newRound = false;
+
         static void Main(string[] args)
         {
-            Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            client.Connect("www-cdn-twitch.saltybet.com", 1337);
+            fighterRepository = new FighterRepository();
+            stateExtractor = new StateExtractor();
+            currentState = new State();
+            InitializeDB();
+            InitializeWebSocketListener();
 
-            
-
-            Console.WriteLine("hello");
-
-            /*
-            Console.CursorVisible = false;
-
-            Console.WriteLine("[WELCOME TO SALTY BET BOT!]\n");
-            Console.WriteLine("Current state:");
-    
-            var credentials = DBCredentials.ParseFromJsonFile(@"Resources\dbcredentials.json");
-            db.SetDBCredentials(credentials);
-
-            State currentState = new State();
-            Match match = new Match();
-
-            //Start data extractor thread
-            Thread dataExtractorThread = new Thread(() => { DataGatheringLoop(out currentState); });
-            dataExtractorThread.Start();
-
-            bool matchEnded = true;
-
-            while (true)
-            {
-                if (currentState != null)
-                {
-                    if (match.P1Name != currentState.P1Name || match.P2Name != currentState.P2Name)
-                    {
-                        match = new Match()
-                        {
-                            P1Name = currentState.P1Name,
-                            P2Name = currentState.P2Name
-                        };
-                        matchEnded = false;
-                    }
-
-                    switch (currentState.Status)
-                    {
-                        case "open":
-                            break;
-
-                        case "locked":
-                            break;
-
-                        case "1":
-
-                            if (!matchEnded)
-                            {
-                                match.Winner = TeamColor.RED;
-                                UpdateDatabase(match);
-                                matchEnded = true;
-                            }
-                            break;
-                        case "2":
-
-                            if (!matchEnded)
-                            {
-                                match.Winner = TeamColor.BLUE;
-                                UpdateDatabase(match);
-                                matchEnded = true;
-                            }
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
-                Thread.Sleep(1000);
-            }*/
+            Console.ReadLine();
         }
 
-        private static void DataGatheringLoop(out State state)
+        private static void UpdateState()
         {
-            var stateExtractor = new StateExtractor();
-
-            while (true)
+            State newState = stateExtractor.GetCurrentState();
+            if (newState.Status != currentState.Status)
             {
-                state = stateExtractor.GetCurrentState();
-                Thread.Sleep(3000);
+                currentState = newState;
+                EvaluateNewState();
             }
+        }
+
+        private static void EvaluateNewState()
+        {
+            switch (currentState.Status)
+            {
+                case "open":
+
+                    newRound = true;
+
+                    if (currentMatch == null)
+                    {
+                        currentMatch = new Match()
+                        {
+                            P1Name = currentState.P1Name,
+                            P2Name = currentState.P2Name,
+                        };
+                    }
+
+                    break;
+
+                case "closed":
+
+                    if (currentMatch.P1Total == null || currentMatch.P2Total == null)
+                    {
+                        currentMatch.P1Total = currentState.P1Total;
+                        currentMatch.P2Total = currentMatch.P2Total;
+                    }
+
+                    break;
+
+                case "1":
+
+                    if (newRound)
+                    {
+                        currentMatch.Winner = TeamColor.RED;
+                        UpdateDatabase(currentMatch);
+                        newRound = false;
+                    }
+                    break;
+
+                case "2":
+
+                    if (newRound)
+                    {
+                        currentMatch.Winner = TeamColor.BLUE;
+                        UpdateDatabase(currentMatch);
+                        newRound = false;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        private static void SaltyWS_OnMessageReceived(object sender, MessageEventArgs e)
+        {
+            if (e.Data.Contains("42"))
+            {
+                UpdateState();
+            }
+        }
+
+        private static void InitializeWebSocketListener()
+        {
+            wsListener = new SaltyWebSocketListener(SaltyWS_OnMessageReceived);
+            wsListener.Connect();
+        }
+
+        private static void InitializeDB()
+        {
+            var credentials = DBCredentials.ParseFromJsonFile(@"Resources\dbcredentials.json");
+            db = DBConnection.Instance();
+            db.SetDBCredentials(credentials);
         }
 
         private static void UpdateDatabase(Match match)
         {
-            if (!db.IsConnected())
-            {
-                return;
-            }
-
             TeamColor winner = match.Winner;
             Fighter redFighter = fighterRepository.FighterExists(match.P1Name);
             Fighter blueFighter = fighterRepository.FighterExists(match.P2Name);
@@ -162,7 +171,6 @@ namespace ConsoleApp
 
                 fighterRepository.UpdateFighter(blueFighter.ID, updatedFighter);
             }
-            db.Connection.Close();
         }
     }
 }

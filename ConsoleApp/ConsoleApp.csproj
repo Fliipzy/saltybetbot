@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="MySql.Data" Version="8.0.17" />
+    <PackageReference Include="websocketsharp.core" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
