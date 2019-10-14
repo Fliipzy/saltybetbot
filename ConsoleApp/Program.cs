@@ -1,18 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using MySql.Data.MySqlClient;
-using SaltyLibrary;
 using SaltyLibrary.Data;
 using SaltyLibrary.Repositories;
 using SaltyLibrary.Saltybet;
 using SaltyLibrary.Saltybet.Enums;
 using SaltyLibrary.Services;
 using SaltyLibrary.Twitch;
-using SaltyLibrary.Users;
 using WebSocketSharp;
 
 namespace ConsoleApp
@@ -27,9 +20,9 @@ namespace ConsoleApp
         private static BetInformationExtractor betInfoExtractor;
         private static State currentState;
         private static Match currentMatch;
-        private static bool newRound = false;
         private static GameMode gameMode = GameMode.UNKNOWN;
 
+        private static bool newRound = false;
         private static long matchStartTicks;
         private static long matchDoneTicks;
 
@@ -72,6 +65,76 @@ namespace ConsoleApp
         }
 
         private static void EvaluateNewState()
+        {
+            EvaluateGameMode();
+
+            switch (currentState.Status)
+            {
+                case "open":
+
+                    WriteLineColor("%cUpdate:%r New round starting soon!", ConsoleColor.Green);
+                    WriteLineColor($"%cFighters:%r %c{currentState.P1Name} %rVS %c{currentState.P2Name}", ConsoleColor.Green, ConsoleColor.Red, ConsoleColor.Blue);
+
+                    if (!newRound)
+                    {
+                        newRound = true;
+                    }
+                    break;
+
+                case "locked":
+
+                    WriteLineColor("%cUpdate: %rRound has started!", ConsoleColor.Green);
+                    WriteLineColor($"%cTotal bets: %c{currentState.P1Total}%r, %c{currentState.P2Total}", ConsoleColor.Green, ConsoleColor.Red, ConsoleColor.Blue);
+
+                    if (newRound)
+                    {
+                        matchStartTicks = DateTime.Now.Ticks;
+
+                        currentMatch.P1Name = currentState.P1Name;
+                        currentMatch.P2Name = currentState.P2Name;
+                        currentMatch.P1Total = currentState.P1Total;
+                        currentMatch.P2Total = currentMatch.P2Total;
+
+                        Tuple<int, int> pTotalBetsTuple = betInfoExtractor.GetBetInformation();
+                        currentMatch.RedTotalBetters = pTotalBetsTuple.Item1;
+                        currentMatch.BlueTotalBetters = pTotalBetsTuple.Item2;
+                    }
+                    break;
+
+                case "1":
+
+                    matchDoneTicks = DateTime.Now.Ticks;
+                    WriteLineColor($"%cUpdate: %c{currentState.P1Name}%r won!", ConsoleColor.Green, ConsoleColor.Red);
+                    
+                    if (newRound)
+                    {
+                        currentMatch.Winner = TeamColor.RED;
+                        UpdateDatabase(currentMatch);
+                        newRound = false;
+                        currentMatch = new Match();
+                    }
+                    break;
+
+                case "2":
+
+                    matchDoneTicks = DateTime.Now.Ticks;
+                    WriteLineColor($"%cUpdate: %c{currentState.P2Name}%r won!", ConsoleColor.Green, ConsoleColor.Blue);
+
+                    if (newRound)
+                    {
+                        currentMatch.Winner = TeamColor.BLUE;
+                        UpdateDatabase(currentMatch);
+                        newRound = false;
+                        currentMatch = new Match();
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        private static void EvaluateGameMode()
         {
             switch (currentState.Alert)
             {
@@ -125,115 +188,6 @@ namespace ConsoleApp
                         gameMode = GameMode.MATCHMAKING;
                         WriteLineColor("%cSWITCHED TO MATCHMAKING MODE!", ConsoleColor.Cyan);
                     }
-                    break;
-            }
-
-            switch (currentState.Status)
-            {
-                case "open":
-
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write("Update: ");
-                    Console.ResetColor();
-                    Console.Write("New round starting soon!\n");
-
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write("Fighters: ");
-                    Console.ResetColor();
-
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.Write(currentState.P1Name);
-                    Console.ResetColor();
-                    Console.Write(" vs ");
-                    Console.ForegroundColor = ConsoleColor.Blue;
-                    Console.Write(currentState.P2Name + "\n");
-                    Console.ResetColor();
-
-                    if (!newRound)
-                    {
-                        newRound = true;
-                    }
-                    break;
-
-                case "locked":
-
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write("Update: ");
-                    Console.ResetColor();
-                    Console.Write("Round has started!\n");
-
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write("TotalBets: ");
-
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.Write(currentState.P1Total);
-                    Console.ResetColor();
-
-                    Console.Write(", ");
-
-                    Console.ForegroundColor = ConsoleColor.Blue;
-                    Console.Write(currentState.P2Total + "\n");
-                    Console.ResetColor();
-
-
-                    if (newRound)
-                    {
-                        matchStartTicks = DateTime.Now.Ticks;
-
-                        currentMatch.P1Name = currentState.P1Name;
-                        currentMatch.P2Name = currentState.P2Name;
-                        currentMatch.P1Total = currentState.P1Total;
-                        currentMatch.P2Total = currentMatch.P2Total;
-
-                        Tuple<int, int> pTotalBetsTuple = betInfoExtractor.GetBetInformation();
-                        currentMatch.RedTotalBetters = pTotalBetsTuple.Item1;
-                        currentMatch.BlueTotalBetters = pTotalBetsTuple.Item2;
-                    }
-                    break;
-
-                case "1":
-
-                    matchDoneTicks = DateTime.Now.Ticks;
-
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write("Update: ");
-                    Console.ResetColor();
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.Write(currentState.P1Name + " ");
-                    Console.ResetColor();
-                    Console.Write("won!\n");
-
-                    if (newRound)
-                    {
-                        currentMatch.Winner = TeamColor.RED;
-                        UpdateDatabase(currentMatch);
-                        newRound = false;
-                        currentMatch = new Match();
-                    }
-                    break;
-
-                case "2":
-
-                    matchDoneTicks = DateTime.Now.Ticks;
-
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write("Update: ");
-                    Console.ResetColor();
-                    Console.ForegroundColor = ConsoleColor.Blue;
-                    Console.Write(currentState.P2Name + " ");
-                    Console.ResetColor();
-                    Console.Write("won!\n");
-
-                    if (newRound)
-                    {
-                        currentMatch.Winner = TeamColor.BLUE;
-                        UpdateDatabase(currentMatch);
-                        newRound = false;
-                        currentMatch = new Match();
-                    }
-                    break;
-
-                default:
                     break;
             }
         }
