@@ -170,6 +170,47 @@ namespace SaltyLibrary.Repositories
                 return fighter;
         }
 
+        public void UpdateFighterWin(string name, string rank)
+        {
+            if (dbConnection.IsConnected())
+            {
+                string sql = "INSERT INTO fighter (fighter.name, wins, losses, fighter.rank) " +
+                             "VALUES (@name, 1, 0, @rank) " +
+                             "ON DUPLICATE KEY UPDATE " +
+                             "fighter.rank = IF(fighter.rank IS NOT NULL AND VALUES(fighter.rank) IS NULL, fighter.rank, VALUES(fighter.rank)), " +
+                             "wins = wins + 1";
+                var cmd = new MySqlCommand(sql, dbConnection.Connection);
+                cmd.Parameters.AddWithValue("name", name);
+                cmd.Parameters.AddWithValue("rank", rank);
+
+                cmd.ExecuteNonQuery();
+
+                cmd.Dispose();
+                dbConnection.Close();
+            }
+
+        }
+
+        public void UpdateFighterLoss(string name, string rank)
+        {
+            if (dbConnection.IsConnected())
+            {
+                string sql = "INSERT INTO fighter (fighter.name, wins, losses, fighter.rank) " +
+                             "VALUES(@name, 0, 1, @rank) " +
+                             "ON DUPLICATE KEY UPDATE " +
+                             "fighter.rank = IF(fighter.rank IS NOT NULL AND VALUES(fighter.rank) IS NULL, fighter.rank, VALUES(fighter.rank)), " +
+                             "losses = losses + 1;";
+                var cmd = new MySqlCommand(sql, dbConnection.Connection);
+                cmd.Parameters.AddWithValue("name", name);
+                cmd.Parameters.AddWithValue("rank", rank);
+
+                cmd.ExecuteNonQuery();
+
+                cmd.Dispose();
+                dbConnection.Close();
+            }
+        }
+
         private Fighter MapRowToFighter(object[] fdata)
         {
             Fighter fighter = new Fighter();

@@ -8,7 +8,9 @@ namespace SaltyLibrary.Saltybet
 {
     public class Match 
     {
-        public Match() {}
+        public string P1Tier { get; set; }
+
+        public string P2Tier { get; set; }
 
         [JsonProperty("p1name")]
         public string P1Name { get; set; }
@@ -26,6 +28,11 @@ namespace SaltyLibrary.Saltybet
 
         public int RedTotalBetters { get; set; }
 
+        public int Duration { get; set; }
+
         public TeamColor Winner { get; set; } = TeamColor.NONE;
+
+        public bool Tournament { get; set; }
+
     }
 }

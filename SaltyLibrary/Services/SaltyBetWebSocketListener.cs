@@ -6,7 +6,7 @@ using WebSocketSharp;
 
 namespace SaltyLibrary.Services
 {
-    public class SaltyWebSocketListener : IDisposable
+    public class SaltyBetWebSocketListener : IDisposable
     {
         public const string WS_URL = "wss://www.saltybet.com:2096/socket.io/?EIO=3&transport=websocket";
         public const int PING_INTERVAL = 25000;
@@ -17,7 +17,7 @@ namespace SaltyLibrary.Services
 
         public bool Running { get; private set; } = false;
 
-        public SaltyWebSocketListener(EventHandler<MessageEventArgs> messageReceivedAction)
+        public SaltyBetWebSocketListener(EventHandler<MessageEventArgs> messageReceivedAction)
         {
             ws = new WebSocket(WS_URL);
             MessageReceived += messageReceivedAction;

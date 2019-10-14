@@ -5,6 +5,7 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <ApplicationIcon>Resources\Icons\saltybet.ico</ApplicationIcon>
     <StartupObject>ConsoleApp.Program</StartupObject>
+    <AssemblyName>SaltyBetBot</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
